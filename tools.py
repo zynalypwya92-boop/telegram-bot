@@ -23,7 +23,37 @@ def translate_text(text: str, target_lang: str = "fa") -> str:
         return f"خطا در ترجمه: {e}"
 
 
+def get_persian_market_price(keyword_fa: str, api_key: str) -> str:
+    """
+    قیمت دلار/یورو/طلا/سکه/بیت‌کوین به تومان از BrsApi.ir (رایگان، نیاز به کلید رایگان از سایت).
+    کلید رایگان: از brsapi.ir ثبت‌نام کن (بدون پرداخت) و کلید بده.
+    """
+    if not api_key or api_key == "PUT_YOUR_BRSAPI_KEY_HERE":
+        return "برای این قابلیت باید کلید رایگان BrsApi رو تنظیم کنی (متغیر BRS_API_KEY)."
+
+    url = "https://BrsApi.ir/Api/Market/Gold_Currency.php"
+    params = {"key": api_key}
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        data = resp.json()
+    except Exception as e:
+        return f"خطا در دریافت قیمت: {e}"
+
+    # داده‌ها معمولا زیر بخش‌های gold / currency / cryptocurrency هستن
+    for section in data.values():
+        if isinstance(section, list):
+            for item in section:
+                name = str(item.get("name", ""))
+                if keyword_fa in name:
+                    price = item.get("price", "نامشخص")
+                    unit = item.get("unit", "تومان")
+                    return f"{name}: {price} {unit}"
+
+    return f"قیمت «{keyword_fa}» پیدا نشد."
+
+
 def get_crypto_price(coin_id: str = "bitcoin", vs_currency: str = "usd") -> str:
+
     """
     قیمت لحظه‌ای ارز دیجیتال از CoinGecko (API رایگان و بدون نیاز به کلید).
     مثال coin_id: bitcoin, ethereum, dogecoin, tether
@@ -57,3 +87,4 @@ def convert_video_to_gif(input_path: str, output_path: str, fps: int = 10, width
         return result.returncode == 0
     except Exception:
         return False
+                    
