@@ -41,6 +41,17 @@ logger = logging.getLogger(__name__)
 # توکن ربات: یا از متغیر محیطی می‌خونه یا اینجا مستقیم بنویس
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
 
+# کلید رایگان BrsApi برای قیمت دلار/طلا/سکه (از brsapi.ir رایگان بگیر)
+BRS_API_KEY = os.environ.get("BRS_API_KEY", "PUT_YOUR_BRSAPI_KEY_HERE")
+
+# کلماتی که اگه کاربر مستقیم بنویسه (بدون دستور /price) قیمت خودکار میاد
+PRICE_KEYWORDS_FA = [
+    "دلار", "یورو", "پوند", "درهم",
+    "طلا", "سکه",
+    "بیت کوین", "بیتکوین", "اتریوم", "تتر",
+]
+
+
 
 # ---------- دستورات پایه ----------
 
@@ -165,9 +176,20 @@ async def video_to_gif_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
-    response = database.find_matching_trigger(update.effective_chat.id, update.message.text)
+
+    text = update.message.text.strip()
+
+    # ۱. اول تریگرهای شخصی‌سازی‌شده‌ی کاربر رو چک کن
+    response = database.find_matching_trigger(update.effective_chat.id, text)
     if response:
         await update.message.reply_text(response)
+        return
+
+    # ۲. اگه دقیقاً یکی از کلمات قیمتی بود (دلار/طلا/سکه و...)، خودکار قیمت رو بیار
+    if text in PRICE_KEYWORDS_FA:
+        result = tools.get_persian_market_price(text, BRS_API_KEY)
+        await update.message.reply_text(result)
+        return
 
 
 def main():
@@ -198,3 +220,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+  
